@@ -3,6 +3,8 @@ import sqlite3
 import subprocess
 import pickle
 import os
+import hmac  # Added for secure deserialization
+import hashlib  # Added for secure deserialization
 
 # hardcoded API token (Issue 1)
 API_TOKEN = "AKIAEXAMPLERAWTOKEN12345"
@@ -30,9 +32,37 @@ def run_shell(command):
     # command injection risk if command includes unsanitized input (Issue 4)
     return subprocess.getoutput(command)
 
-def deserialize_blob(blob):
-    # insecure deserialization of untrusted data (Issue 5)
-    return pickle.loads(blob)
+def deserialize_blob(blob, secret_key=None):
+    """
+    Safely deserialize a blob with optional signature verification.
+    
+    Args:
+        blob: The data to deserialize
+        secret_key: Optional secret key for signature verification
+        
+    Returns:
+        Deserialized data if verification passes
+        
+    Raises:
+        ValueError: If signature verification fails or input is untrusted
+    """
+    # SECURITY FIX: Added input validation and signature verification
+    if not secret_key:
+        raise ValueError("Unsigned pickled data is not accepted - signature verification required")
+        
+    try:
+        # Split signature and data
+        signature, data = blob.split(b':', 1)
+        
+        # Verify HMAC signature
+        expected_sig = hmac.new(secret_key.encode(), data, hashlib.sha256).hexdigest().encode()
+        if not hmac.compare_digest(signature, expected_sig):
+            raise ValueError("Invalid signature - data may be tampered")
+            
+        # Only deserialize after verification
+        return pickle.loads(data)
+    except Exception as e:
+        raise ValueError(f"Failed to safely deserialize data: {str(e)}")
 
 if __name__ == "__main__":
     # seed some data
