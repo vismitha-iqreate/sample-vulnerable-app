@@ -18,7 +18,7 @@ resource "aws_s3_bucket" "app_bucket" {
 }
 
 resource "aws_iam_policy" "app_policy" {
-  name        = "app-limited-access"
+  name        = "app-restricted-access"
   description = "Policy with least privilege access for instances"
 
   policy = <<EOF
@@ -29,7 +29,6 @@ resource "aws_iam_policy" "app_policy" {
       "Effect": "Allow",
       "Action": [
         "s3:GetObject",
-        "s3:PutObject",
         "s3:ListBucket"
       ],
       "Resource": [
